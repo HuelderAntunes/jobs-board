@@ -4,13 +4,16 @@ import CreateJobService from '../services/CreateJobService'
 import JobsRepository from '../repositories/JobsRepository'
 import { getCustomRepository } from 'typeorm'
 import * as yup from 'yup'
+import { parseISO } from 'date-fns'
 
 const jobsRouter = Router()
 
 jobsRouter.get('/', async (request, response) => {
     const jobsRepository = getCustomRepository(JobsRepository)
 
-    const jobs = await jobsRepository.find()
+    const jobs = await jobsRepository.find({
+        relations: ['tags']
+    })
 
     return response.json({
         success: {
@@ -19,13 +22,14 @@ jobsRouter.get('/', async (request, response) => {
     })
 })
 
-jobsRouter.get('/:id', async (request, response) => {
+jobsRouter.get('/:slug', async (request, response) => {
     const jobsRepository = getCustomRepository(JobsRepository)
 
     const job = await jobsRepository.findOne({
         where: {
-            id: request.params.id
-        }
+            slug: request.params.slug
+        },
+        relations: ['tags']
     })
 
     if (!job) {
@@ -42,77 +46,92 @@ jobsRouter.get('/:id', async (request, response) => {
 })
 
 jobsRouter.post('/', async (request, response) => {
-    const {
-        role,
-        company,
-        companyWebsite,
-        companyEmail,
-        contactEmail,
-        description,
-        applicationUrl,
-        paymentStatus,
-        expirationDate,
-        createdAt
-    } = request.body
+    try {
+        const {
+            role,
+            company,
+            companyWebsite,
+            companyEmail,
+            contactEmail,
+            description,
+            applicationUrl,
+            paymentStatus,
+            expirationDate,
+            companyAvatar,
+            tags,
+            slug
+        } = request.body
 
-    const schema = yup.object().shape({
-        role: yup.string().required(),
-        company: yup.string().required(),
-        companyWebsite: yup.string().required(),
-        companyEmail: yup
-            .string()
-            .email()
-            .required(),
-        contactEmail: yup
-            .string()
-            .email()
-            .required(),
-        description: yup.string().required(),
-        applicationUrl: yup.string().required(),
-        expirationDate: yup.date().required(),
-        createdAt: yup.date().required()
-    })
+        const schema = yup.object().shape({
+            role: yup.string().required(),
+            slug: yup.string().required(),
+            company: yup.string().required(),
+            companyWebsite: yup.string().required(),
+            companyEmail: yup
+                .string()
+                .email()
+                .required(),
+            contactEmail: yup
+                .string()
+                .email()
+                .required(),
+            companyAvatar: yup.string().required(),
+            description: yup.string().required(),
+            applicationUrl: yup.string().required(),
+            expirationDate: yup.date().required(),
+            tags: yup.array()
+        })
 
-    const isValid = await schema.isValid({
-        role,
-        company,
-        companyWebsite,
-        companyEmail,
-        contactEmail,
-        description,
-        applicationUrl,
-        paymentStatus,
-        expirationDate,
-        createdAt
-    })
+        const isValid = await schema.isValid({
+            role,
+            company,
+            companyWebsite,
+            companyEmail,
+            contactEmail,
+            description,
+            applicationUrl,
+            expirationDate,
+            companyAvatar,
+            tags,
+            slug
+        })
 
-    if (!isValid) {
-        return response
-            .status(422)
-            .json({ error: { message: 'Invalid fields.' } })
-    }
+        const convertedExpirationDate = parseISO(expirationDate)
 
-    const createJob = new CreateJobService()
+        if (!isValid) {
+            return response
+                .status(422)
+                .json({ error: { message: 'Invalid fields.' } })
+        }
 
-    const job = await createJob.execute({
-        role,
-        company,
-        companyWebsite,
-        companyEmail,
-        contactEmail,
-        description,
-        applicationUrl,
-        expirationDate,
-        createdAt
-    })
+        const createJob = new CreateJobService()
 
-    if (!job) {
+        const job = await createJob.execute({
+            role,
+            company,
+            companyWebsite,
+            companyEmail,
+            contactEmail,
+            companyAvatar,
+            description,
+            applicationUrl,
+            slug,
+            expirationDate: convertedExpirationDate,
+            tags
+        })
+
+        if (!job) {
+            return response
+                .status(500)
+                .json({ error: { message: 'Job cannot be created.' } })
+        }
+
+        return response.json({ success: job })
+    } catch {
         return response
             .status(500)
-            .json({ error: { message: 'Job cannot be created.' } })
+            .json({ error: { message: 'Internal error.' } })
     }
-
-    return response.json({ success: job })
 })
 
 export default jobsRouter

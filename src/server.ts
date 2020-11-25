@@ -4,6 +4,7 @@ import * as bodyParser from 'body-parser'
 import loggerMiddleware from './middlewares/logger'
 import * as dotenv from 'dotenv'
 import './database'
+import { handleError } from './helpers/errors'
 
 dotenv.config({
     path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env'
@@ -17,7 +18,8 @@ const app = new App({
         bodyParser.json(),
         bodyParser.urlencoded({ extended: true }),
         routes,
-        loggerMiddleware
+        loggerMiddleware,
+        handleError
     ]
 })
 

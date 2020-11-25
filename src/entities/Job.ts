@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+import Tag from './Tag'
 
 @Entity()
 class Job {
@@ -11,7 +12,13 @@ class Job {
     @Column()
     company: string
 
-    @Column('')
+    @Column()
+    slug: string
+
+    @Column()
+    companyAvatar: string
+
+    @Column()
     companyWebsite: string
 
     @Column()
@@ -32,8 +39,17 @@ class Job {
     @Column('timestamp with time zone')
     expirationDate: Date
 
-    @Column('timestamp with time zone')
+    @Column('timestamp with time zone', {
+        nullable: false,
+        default: () => 'CURRENT_TIMESTAMP'
+    })
     createdAt: Date
+
+    @OneToMany(
+        type => Tag,
+        tag => tag.job
+    )
+    tags: Tag[]
 }
 
 export default Job
