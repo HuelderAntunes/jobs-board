@@ -12,7 +12,10 @@ jobsRouter.get('/', async (request, response) => {
     const jobsRepository = getCustomRepository(JobsRepository)
 
     const jobs = await jobsRepository.find({
-        relations: ['tags']
+        relations: ['tags'],
+        order: {
+            id: 'DESC'
+        }
     })
 
     return response.json({
