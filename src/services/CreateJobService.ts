@@ -54,7 +54,7 @@ class CreateJobService {
 
             if (tags) {
                 const tagsList = tags.map(name => {
-                    return { name: _.startCase(name), job }
+                    return { name: name, job }
                 })
 
                 const tagsCreate = tagsRepository.create(tagsList)
